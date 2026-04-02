@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snakes Game</title>
+
+<style>
+body {
+  margin: 0;
+  background: #111;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-family: Arial, sans-serif;
+  overflow: hidden;
+}
+
+canvas {
+  background: #1a1a1a;
+  border: 4px solid #00ff88;
+  border-radius: 10px;
+}
+
+#score {
+  position: absolute;
+  top: 20px;
+  color: #00ff88;
+  font-size: 26px;
+  font-weight: bold;
+}
+
+#controls {
+  position: absolute;
+  bottom: 25px;
+  display: flex;
+  gap: 12px;
+}
+
+.btn {
+  background: #00ff88;
+  color: #111;
+  font-size: 22px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  user-select: none;
+}
+</style>
+</head>
+
+<body>
+
+<div id="score">Score: 0</div>
+<canvas id="gameCanvas" width="400" height="400"></canvas>
+
+<div id="controls">
+  <div class="btn" data-dir="up">↑</div>
+  <div class="btn" data-dir="left">←</div>
+  <div class="btn" data-dir="down">↓</div>
+  <div class="btn" data-dir="right">→</div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const grid = 20;
+const cols = canvas.width / grid;
+const rows = canvas.height / grid;
+
+let snake, direction, food, score, isPlaying;
+
+function initGame() {
+  snake = [{x: 10, y: 10}];
+  direction = {x: 0, y: 0};
+  food = spawnFood();
+  score = 0;
+  isPlaying = false;
+  updateScore();
+}
+
+function spawnFood() {
+  let newFood;
+  do {
+    newFood = {
+      x: Math.floor(Math.random() * cols),
+      y: Math.floor(Math.random() * rows)
+    };
+  } while (snake && snake.some(s => s.x === newFood.x && s.y === newFood.y));
+  return newFood;
+}
+
+function updateScore() {
+  document.getElementById('score').innerText = 'Score: ' + score;
+}
+
+function draw() {
+  // background
+  ctx.fillStyle = "#1a1a1a";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // food
+  ctx.fillStyle = "#ffd700";
+  ctx.fillRect(food.x * grid, food.y * grid, grid, grid);
+
+  // snake (smooth consistent color)
+  snake.forEach((seg, i) => {
+    ctx.fillStyle = `hsl(${(120 + i * 5) % 360}, 100%, 50%)`;
+    ctx.fillRect(seg.x * grid, seg.y * grid, grid, grid);
+  });
+}
+
+function update() {
+  if (!isPlaying) return;
+
+  const head = {
+    x: snake[0].x + direction.x,
+    y: snake[0].y + direction.y
+  };
+
+  // wall collision
+  if (
+    head.x < 0 || head.x >= cols ||
+    head.y < 0 || head.y >= rows
+  ) {
+    return gameOver();
+  }
+
+  // self collision
+  for (let i = 0; i < snake.length; i++) {
+    if (snake[i].x === head.x && snake[i].y === head.y) {
+      return gameOver();
+    }
+  }
+
+  snake.unshift(head);
+
+  // eat food
+  if (head.x === food.x && head.y === food.y) {
+    score++;
+    updateScore();
+    food = spawnFood();
+  } else {
+    snake.pop();
+  }
+}
+
+function gameOver() {
+  alert("Game Over! Score: " + score);
+  initGame();
+}
+
+function setDirection(newDir) {
+  if (
+    (newDir.x === 1 && direction.x === -1) ||
+    (newDir.x === -1 && direction.x === 1) ||
+    (newDir.y === 1 && direction.y === -1) ||
+    (newDir.y === -1 && direction.y === 1)
+  ) return;
+
+  direction = newDir;
+  isPlaying = true;
+}
+
+// keyboard
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowUp') setDirection({x:0,y:-1});
+  if (e.key === 'ArrowDown') setDirection({x:0,y:1});
+  if (e.key === 'ArrowLeft') setDirection({x:-1,y:0});
+  if (e.key === 'ArrowRight') setDirection({x:1,y:0});
+});
+
+// mobile buttons
+document.querySelectorAll('.btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const dir = btn.dataset.dir;
+    if (dir === 'up') setDirection({x:0,y:-1});
+    if (dir === 'down') setDirection({x:0,y:1});
+    if (dir === 'left') setDirection({x:-1,y:0});
+    if (dir === 'right') setDirection({x:1,y:0});
+  });
+});
+
+// game loop (243ms exactly)
+setInterval(() => {
+  update();
+  draw();
+}, 243);
+
+// start
+initGame();
+draw();
+</script>
+
+</body>
+</html>
